@@ -7,6 +7,16 @@
       <a-layout-content class="content">
         <router-view />
       </a-layout-content>
+      <a-layout-footer class="app-footer">
+        <a-space size="small">
+          <span>© 2026 火山图库</span>
+          <a-divider type="vertical" />
+          <a href="https://github.com/LCL-001/yun-picture-base" target="_blank" rel="noopener" class="github-link">
+            <GithubOutlined />
+            <span>LCL-001/yun-picture-base</span>
+          </a>
+        </a-space>
+      </a-layout-footer>
     </a-layout>
 
     <!-- 桌面端浮动侧边栏 -->
@@ -122,6 +132,7 @@ import { computed, h, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   FolderOpenOutlined,
+  GithubOutlined,
   HomeOutlined,
   PlusCircleOutlined,
   ReadOutlined,
@@ -261,9 +272,16 @@ watchEffect(() => { fetchTeamSpaceList() })
   line-height: 64px;
 }
 
+.app-frame {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 .content {
+  flex: 1;
   min-width: 0;
-  padding: 28px 28px 28px 84px;
+  padding: 28px 28px 40px 84px;
   background: transparent;
 }
 
@@ -392,7 +410,7 @@ watchEffect(() => { fetchTeamSpaceList() })
 /* 底部胶囊导航 */
 .mobile-bottom-nav {
   position: fixed;
-  bottom: 16px;
+  bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 30;
@@ -451,6 +469,31 @@ watchEffect(() => { fetchTeamSpaceList() })
   background: rgba(22, 119, 255, 0.06);
 }
 
+/* 底部 footer */
+.app-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  text-align: center;
+  padding: 8px 24px;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(12px);
+  color: #94a3b8;
+  font-size: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.app-footer .github-link {
+  color: #64748b;
+  transition: color 0.2s;
+}
+
+.app-footer .github-link:hover {
+  color: #1677ff;
+}
+
 /* 移动端适配 */
 @media (max-width: 768px) {
   .header {
@@ -458,7 +501,12 @@ watchEffect(() => { fetchTeamSpaceList() })
   }
 
   .content {
-    padding: 16px 12px 88px;
+    padding: 16px 12px 128px;
+  }
+
+  .app-footer {
+    padding: 6px 12px;
+    font-size: 11px;
   }
 }
 
