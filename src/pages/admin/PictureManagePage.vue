@@ -3,8 +3,8 @@
     <a-flex justify="space-between">
       <h2>图片管理</h2>
       <a-space>
-        <a-button type="primary" href="/add_picture" target="_blank">+ 创建图片</a-button>
-        <a-button type="primary" href="/add_picture/batch" target="_blank" ghost>+ 批量创建图片</a-button>
+        <a-button type="primary" href="/add_picture">+ 创建图片</a-button>
+        <a-button type="primary" href="/add_picture/batch" ghost>+ 批量创建图片</a-button>
       </a-space>
     </a-flex>
     <div style="margin-bottom: 16px" />
@@ -83,27 +83,40 @@
           {{ dayjs(record.editTime).format('YYYY-MM-DD HH:mm:ss') }}
         </template>
         <template v-else-if="column.key === 'action'">
-          <a-space wrap>
+          <div class="table-action-bar">
             <a-button
               v-if="record.reviewStatus !== PIC_REVIEW_STATUS_ENUM.PASS"
-              type="link"
+              class="table-action-button approve-action"
               @click="handleReview(record, PIC_REVIEW_STATUS_ENUM.PASS)"
             >
+              <template #icon>
+                <CheckCircleOutlined />
+              </template>
               通过
             </a-button>
             <a-button
               v-if="record.reviewStatus !== PIC_REVIEW_STATUS_ENUM.REJECT"
-              type="link"
-              danger
+              class="table-action-button reject-action"
               @click="handleReview(record, PIC_REVIEW_STATUS_ENUM.REJECT)"
             >
+              <template #icon>
+                <CloseCircleOutlined />
+              </template>
               拒绝
             </a-button>
-            <a-button type="link" :href="`/add_picture?id=${record.id}`" target="_blank">
+            <a-button class="table-action-button edit-action" :href="`/add_picture?id=${record.id}`">
+              <template #icon>
+                <EditOutlined />
+              </template>
               编辑
             </a-button>
-            <a-button danger @click="doDelete(record.id)">删除</a-button>
-          </a-space>
+            <a-button class="table-action-button delete-action" @click="doDelete(record.id)">
+              <template #icon>
+                <DeleteOutlined />
+              </template>
+              删除
+            </a-button>
+          </div>
         </template>
       </template>
     </a-table>
@@ -111,6 +124,12 @@
 </template>
 <script lang="ts" setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  DeleteOutlined,
+  EditOutlined,
+} from '@ant-design/icons-vue'
 import {
   deletePictureUsingPost,
   doPictureReviewUsingPost,
@@ -180,6 +199,7 @@ const columns = [
   {
     title: '操作',
     key: 'action',
+    width: 120,
   },
 ]
 
@@ -272,3 +292,70 @@ const handleReview = async (record: API.Picture, reviewStatus: number) => {
   }
 }
 </script>
+
+<style scoped>
+#pictureManagePage .table-action-bar {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+#pictureManagePage .table-action-button {
+  height: 28px;
+  min-width: 84px;
+  justify-content: flex-start;
+  padding: 0 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 28px;
+  box-shadow: none;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+#pictureManagePage .table-action-button :deep(.anticon) {
+  font-size: 14px;
+}
+
+#pictureManagePage .approve-action {
+  color: #108548;
+}
+
+#pictureManagePage .approve-action:hover {
+  background: #e8f8ef;
+  color: #0b7a3b;
+}
+
+#pictureManagePage .reject-action {
+  color: #c12e1f;
+}
+
+#pictureManagePage .reject-action:hover {
+  background: #fff1f0;
+  color: #a61d13;
+}
+
+#pictureManagePage .edit-action {
+  color: #1677ff;
+}
+
+#pictureManagePage .edit-action:hover {
+  background: #e6f4ff;
+  color: #0958d9;
+}
+
+#pictureManagePage .delete-action {
+  color: #d4380d;
+}
+
+#pictureManagePage .delete-action:hover {
+  background: #fff1f0;
+  color: #ad2102;
+}
+</style>

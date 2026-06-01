@@ -3,11 +3,11 @@
     <a-flex justify="space-between">
       <h2>空间管理</h2>
       <a-space>
-        <a-button type="primary" href="/add_space" target="_blank">+ 创建空间</a-button>
-        <a-button type="primary" ghost href="/space_analyze?queryPublic=1" target="_blank"
+        <a-button type="primary" href="/add_space">+ 创建空间</a-button>
+        <a-button type="primary" ghost href="/space_analyze?queryPublic=1"
           >分析公共图库</a-button
         >
-        <a-button type="primary" ghost href="/space_analyze?queryAll=1" target="_blank"
+        <a-button type="primary" ghost href="/space_analyze?queryAll=1"
           >分析全部空间</a-button
         >
       </a-space>
@@ -70,15 +70,26 @@
           {{ dayjs(record.editTime).format('YYYY-MM-DD HH:mm:ss') }}
         </template>
         <template v-else-if="column.key === 'action'">
-          <a-space wrap>
-            <a-button type="link" :href="`/space_analyze?spaceId=${record.id}`" target="_blank">
+          <div class="table-action-bar">
+            <a-button class="table-action-button analyze-action" :href="`/space_analyze?spaceId=${record.id}`">
+              <template #icon>
+                <BarChartOutlined />
+              </template>
               分析
             </a-button>
-            <a-button type="link" :href="`/add_space?id=${record.id}`" target="_blank">
+            <a-button class="table-action-button edit-action" :href="`/add_space?id=${record.id}`">
+              <template #icon>
+                <EditOutlined />
+              </template>
               编辑
             </a-button>
-            <a-button danger @click="doDelete(record.id)">删除</a-button>
-          </a-space>
+            <a-button class="table-action-button delete-action" @click="doDelete(record.id)">
+              <template #icon>
+                <DeleteOutlined />
+              </template>
+              删除
+            </a-button>
+          </div>
         </template>
       </template>
     </a-table>
@@ -86,6 +97,7 @@
 </template>
 <script lang="ts" setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { BarChartOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons-vue'
 import { deleteSpaceUsingPost, listSpaceByPageUsingPost } from '@/api/spaceController.ts'
 import { message } from 'ant-design-vue'
 import dayjs from 'dayjs'
@@ -96,6 +108,10 @@ import {
   SPACE_TYPE_OPTIONS,
 } from '../../constants/space.ts'
 import { formatSize } from '../../utils'
+import { SPACE_LIST_REFRESH_EVENT } from '@/constants/events.ts'
+import { useTeamSpaceStore } from '@/stores/useTeamSpaceStore.ts'
+
+const teamSpaceStore = useTeamSpaceStore()
 
 const columns = [
   {
@@ -135,6 +151,7 @@ const columns = [
   {
     title: '操作',
     key: 'action',
+    width: 236,
   },
 ]
 
@@ -201,10 +218,68 @@ const doDelete = async (id: string) => {
   const res = await deleteSpaceUsingPost({ id })
   if (res.data.code === 0) {
     message.success('删除成功')
+    teamSpaceStore.removeTeamSpace(id)
     // 刷新数据
     fetchData()
+    // 通知侧边栏刷新团队空间菜单，避免已删除空间残留
+    window.dispatchEvent(new CustomEvent(SPACE_LIST_REFRESH_EVENT, { detail: { spaceId: id } }))
   } else {
     message.error('删除失败')
   }
 }
 </script>
+
+<style scoped>
+#spaceManagePage .table-action-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+#spaceManagePage .table-action-button {
+  height: 28px;
+  padding: 0 7px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 28px;
+  box-shadow: none;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+#spaceManagePage .table-action-button :deep(.anticon) {
+  font-size: 14px;
+}
+
+#spaceManagePage .analyze-action {
+  color: #0958d9;
+}
+
+#spaceManagePage .analyze-action:hover {
+  background: #eef7ff;
+  color: #003eb3;
+}
+
+#spaceManagePage .edit-action {
+  color: #1677ff;
+}
+
+#spaceManagePage .edit-action:hover {
+  background: #e6f4ff;
+  color: #0958d9;
+}
+
+#spaceManagePage .delete-action {
+  color: #d4380d;
+}
+
+#spaceManagePage .delete-action:hover {
+  background: #fff1f0;
+  color: #ad2102;
+}
+</style>
