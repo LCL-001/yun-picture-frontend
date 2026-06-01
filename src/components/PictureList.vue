@@ -1,34 +1,27 @@
 <template>
   <div class="picture-list">
-    <!-- 图片列表 -->
-    <a-list
-      :grid="{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 4, xl: 5, xxl: 6 }"
-      :data-source="dataList"
-      :loading="loading"
-    >
-      <template #renderItem="{ item: picture }">
-        <a-list-item style="padding: 0">
-          <!-- 单张图片 -->
-          <a-card hoverable @click="doClickPicture(picture)">
+    <!-- 图片瀑布流 -->
+    <a-spin :spinning="loading">
+      <div class="masonry">
+        <div v-for="picture in dataList" :key="picture.id" class="masonry-item">
+          <a-card hoverable @click="doClickPicture(picture)" class="picture-card">
             <template #cover>
-              <img
-                :alt="picture.name"
-                :src="picture.thumbnailUrl ?? picture.url"
-                style="height: 180px; object-fit: cover"
-              />
+              <div class="cover-wrapper">
+                <img
+                  :alt="picture.name"
+                  :src="picture.thumbnailUrl ?? picture.url"
+                  loading="lazy"
+                  style="width: 100%; display: block"
+                />
+                <div class="cover-overlay">
+                  <div class="cover-title">{{ picture.name }}</div>
+                  <a-flex>
+                    <a-tag color="green">{{ picture.category ?? '默认' }}</a-tag>
+                    <a-tag v-for="tag in picture.tags" :key="tag">{{ tag }}</a-tag>
+                  </a-flex>
+                </div>
+              </div>
             </template>
-            <a-card-meta :title="picture.name">
-              <template #description>
-                <a-flex>
-                  <a-tag color="green">
-                    {{ picture.category ?? '默认' }}
-                  </a-tag>
-                  <a-tag v-for="tag in picture.tags" :key="tag">
-                    {{ tag }}
-                  </a-tag>
-                </a-flex>
-              </template>
-            </a-card-meta>
             <template v-if="showOp" #actions>
               <ShareAltOutlined @click="(e) => doShare(picture, e)" />
               <SearchOutlined @click="(e) => doSearch(picture, e)" />
@@ -36,9 +29,9 @@
               <DeleteOutlined v-if="canDelete" @click="(e) => doDelete(picture, e)" />
             </template>
           </a-card>
-        </a-list-item>
-      </template>
-    </a-list>
+        </div>
+      </div>
+    </a-spin>
     <ShareModal ref="shareModalRef" :link="shareLink" />
   </div>
 </template>
@@ -85,8 +78,13 @@ const doClickPicture = (picture: API.PictureVO) => {
 const doSearch = (picture, e) => {
   // 阻止冒泡
   e.stopPropagation()
-  // 打开新的页面
-  window.open(`/search_picture?pictureId=${picture.id}`)
+  // 当前窗口进入以图搜图页面
+  router.push({
+    path: '/search_picture',
+    query: {
+      pictureId: picture.id,
+    },
+  })
 }
 
 // 编辑
@@ -135,4 +133,60 @@ const doShare = (picture, e) => {
 }
 </script>
 
-<style scoped></style>
+<style scoped>
+.masonry {
+  column-count: 5;
+  column-gap: 16px;
+}
+
+.masonry-item {
+  break-inside: avoid;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 1200px) {
+  .masonry { column-count: 4; }
+}
+
+@media (max-width: 992px) {
+  .masonry { column-count: 3; }
+}
+
+@media (max-width: 768px) {
+  .masonry { column-count: 2; }
+}
+
+@media (max-width: 480px) {
+  .masonry { column-count: 1; }
+}
+
+.cover-wrapper {
+  position: relative;
+  overflow: hidden;
+}
+
+.cover-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 24px 12px 8px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.65));
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.picture-card:hover .cover-overlay {
+  opacity: 1;
+}
+
+.cover-title {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>

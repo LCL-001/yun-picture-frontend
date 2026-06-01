@@ -3,6 +3,7 @@
     <!-- 搜索框 -->
     <div class="search-bar">
       <a-input-search
+        class="home-search-input"
         v-model:value="searchParams.searchText"
         placeholder="从海量图片中搜索"
         enter-button="搜索"
@@ -30,19 +31,16 @@
     </div>
     <!-- 图片列表 -->
     <PictureList :dataList="dataList" :loading="loading" />
-    <!-- 分页 -->
-    <a-pagination
-      style="text-align: right"
-      v-model:current="searchParams.current"
-      v-model:pageSize="searchParams.pageSize"
-      :total="total"
-      @change="onPageChange"
-    />
+    <!-- 滚动加载 -->
+    <div style="text-align: center; padding: 24px 0">
+      <a-spin v-if="loadingMore" size="small" />
+      <span v-else-if="!hasMore" style="color: #999; font-size: 13px">— 没有更多了 —</span>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import {
   listPictureTagCategoryUsingGet,
   listPictureVoByPageUsingPost,
@@ -63,10 +61,17 @@ const searchParams = reactive<API.PictureQueryRequest>({
   sortOrder: 'descend',
 })
 
+const loadingMore = ref(false)
+const hasMore = ref(true)
+
 // 获取数据
-const fetchData = async () => {
-  loading.value = true
-  // 转换搜索参数
+const fetchData = async (append = false) => {
+  if (!append) {
+    loading.value = true
+    searchParams.current = 1
+  } else {
+    loadingMore.value = true
+  }
   const params = {
     ...searchParams,
     tags: [] as string[],
@@ -74,7 +79,6 @@ const fetchData = async () => {
   if (selectedCategory.value !== 'all') {
     params.category = selectedCategory.value
   }
-  // [true, false, false] => ['java']
   selectedTagList.value.forEach((useTag, index) => {
     if (useTag) {
       params.tags.push(tagList.value[index])
@@ -82,29 +86,41 @@ const fetchData = async () => {
   })
   const res = await listPictureVoByPageUsingPost(params)
   if (res.data.code === 0 && res.data.data) {
-    dataList.value = res.data.data.records ?? []
+    const records = res.data.data.records ?? []
+    if (append) {
+      dataList.value.push(...records)
+    } else {
+      dataList.value = records
+    }
     total.value = res.data.data.total ?? 0
+    hasMore.value = dataList.value.length < total.value
   } else {
     message.error('获取数据失败，' + res.data.message)
   }
   loading.value = false
+  loadingMore.value = false
 }
 
-// 页面加载时获取数据，请求一次
+const onScroll = () => {
+  const scrollBottom = window.innerHeight + window.scrollY
+  const threshold = document.documentElement.scrollHeight - 200
+  if (scrollBottom >= threshold && hasMore.value && !loadingMore.value && !loading.value) {
+    searchParams.current++
+    fetchData(true)
+  }
+}
+
 onMounted(() => {
   fetchData()
+  window.addEventListener('scroll', onScroll, { passive: true })
 })
 
-// 分页参数
-const onPageChange = (page: number, pageSize: number) => {
-  searchParams.current = page
-  searchParams.pageSize = pageSize
-  fetchData()
-}
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', onScroll)
+})
 
 // 搜索
 const doSearch = () => {
-  // 重置搜索条件
   searchParams.current = 1
   fetchData()
 }
@@ -142,6 +158,27 @@ onMounted(() => {
 #homePage .search-bar {
   max-width: 480px;
   margin: 0 auto 16px;
+}
+
+#homePage .search-bar :deep(.home-search-input .ant-input-group) {
+  display: flex;
+  gap: 10px;
+}
+
+#homePage .search-bar :deep(.home-search-input .ant-input) {
+  height: 42px;
+  border-radius: 12px !important;
+}
+
+#homePage .search-bar :deep(.home-search-input .ant-input-group-addon) {
+  width: auto;
+  background: transparent;
+}
+
+#homePage .search-bar :deep(.home-search-input .ant-input-group-addon .ant-btn) {
+  height: 42px;
+  min-width: 88px;
+  border-radius: 12px !important;
 }
 
 #homePage .tag-bar {
