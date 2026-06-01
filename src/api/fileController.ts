@@ -2,6 +2,25 @@
 /* eslint-disable */
 import request from '@/request'
 
+/** uploadFile POST /api/file/upload */
+export async function uploadFileUsingPost(
+  file?: File,
+  options?: { [key: string]: any }
+) {
+  const formData = new FormData()
+
+  if (file) {
+    formData.append('file', file)
+  }
+
+  return request<API.BaseResponseString_>('/api/file/upload', {
+    method: 'POST',
+    data: formData,
+    requestType: 'form',
+    ...(options || {}),
+  })
+}
+
 /** testDownloadFile GET /api/file/test/download/ */
 export async function testDownloadFileUsingGet(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)

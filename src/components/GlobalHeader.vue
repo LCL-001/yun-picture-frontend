@@ -77,7 +77,7 @@
               <a-spin :spinning="avatarUploading">
                 <a-avatar
                   :size="72"
-                  :src="editForm.userAvatar ?? userProfile.userAvatar ?? loginUserStore.loginUser.userAvatar"
+                  :src="editForm.userAvatar || userProfile.userAvatar || loginUserStore.loginUser.userAvatar"
                 />
               </a-spin>
               <div v-if="isEditing" class="avatar-overlay">

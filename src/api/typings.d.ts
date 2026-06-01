@@ -29,6 +29,12 @@ declare namespace API {
     message?: string
   }
 
+  type BaseResponseListObject_ = {
+    code?: number
+    data?: any[]
+    message?: string
+  }
+
   type BaseResponseListPictureVO_ = {
     code?: number
     data?: PictureVO[]
@@ -305,6 +311,90 @@ declare namespace API {
     current?: number
     pages?: number
     records?: UserVO[]
+    size?: number
+    total?: number
+  }
+
+  type PostVO = {
+    id?: number
+    userId?: number
+    title?: string
+    content?: string
+    images?: string
+    tagList?: string[]
+    likeCount?: number
+    commentCount?: number
+    viewCount?: number
+    status?: number
+    createTime?: string
+    updateTime?: string
+    user?: UserVO
+    isLiked?: boolean
+  }
+
+  type PostAddRequest = {
+    title?: string
+    content?: string
+    images?: string
+    tags?: string
+  }
+
+  type PostEditRequest = {
+    id?: number
+    title?: string
+    content?: string
+    images?: string
+    tags?: string
+  }
+
+  type PostQueryRequest = {
+    current?: number
+    pageSize?: number
+    userId?: number
+    keyword?: string
+  }
+
+  type UserNotification = {
+    id?: number
+    userId?: number
+    fromUserId?: number
+    type?: string
+    targetId?: number
+    summary?: string
+    isRead?: number
+    createTime?: string
+  }
+
+  type BaseResponsePageUserNotification_ = {
+    code?: number
+    data?: PageUserNotification_
+    message?: string
+  }
+
+  type PageUserNotification_ = {
+    current?: number
+    pages?: number
+    records?: UserNotification[]
+    size?: number
+    total?: number
+  }
+
+  type BaseResponsePostVO_ = {
+    code?: number
+    data?: PostVO
+    message?: string
+  }
+
+  type BaseResponsePagePostVO_ = {
+    code?: number
+    data?: PagePostVO_
+    message?: string
+  }
+
+  type PagePostVO_ = {
+    current?: number
+    pages?: number
+    records?: PostVO[]
     size?: number
     total?: number
   }
@@ -696,6 +786,13 @@ declare namespace API {
     checkPassword?: string
     userAccount?: string
     userPassword?: string
+  }
+
+  type UserEditRequest = {
+    id?: number
+    userAvatar?: string
+    userName?: string
+    userProfile?: string
   }
 
   type UserUpdateRequest = {

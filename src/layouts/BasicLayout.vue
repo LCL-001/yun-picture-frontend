@@ -55,7 +55,7 @@
       </div>
       <!-- 空间tab -->
       <a-popover
-        v-if="teamSpaceList.length > 0"
+        v-if="loginUserStore.loginUser.id && teamSpaceList.length > 0"
         trigger="click"
         placement="top"
         :open="spacePopoverOpen"
@@ -91,7 +91,7 @@
         v-else
         class="bottom-nav-item"
         :class="{ active: currentRoute.startsWith('/add_space') }"
-        @click="router.push('/add_space?type=' + SPACE_TYPE_ENUM.TEAM)"
+        @click="loginUserStore.loginUser.id ? router.push('/add_space?type=' + SPACE_TYPE_ENUM.TEAM) : router.push('/user/login')"
       >
         <TeamOutlined />
         <span class="bottom-nav-label">空间</span>
