@@ -1,7 +1,11 @@
 <template>
   <div class="picture-search-form">
+    <!-- 移动端搜索折叠按钮 -->
+    <a-button class="search-toggle-btn" @click="showFilters = !showFilters">
+      <SearchOutlined /> 搜索条件 {{ showFilters ? '▲' : '▼' }}
+    </a-button>
     <!-- 搜索表单 -->
-    <a-form name="searchForm" layout="inline" :model="searchParams" @finish="doSearch">
+    <a-form v-show="showFilters || !isMobile" name="searchForm" layout="inline" :model="searchParams" @finish="doSearch">
       <a-form-item label="关键词" name="searchText">
         <a-input
           v-model:value="searchParams.searchText"
@@ -64,7 +68,8 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, onUnmounted, reactive, ref } from 'vue'
+import { SearchOutlined } from '@ant-design/icons-vue'
 import dayjs from 'dayjs'
 import {listPictureTagCategoryUsingGet, listPictureVoByPageUsingPost} from '@/api/pictureController.ts'
 import { message } from 'ant-design-vue'
@@ -74,6 +79,13 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+// 移动端折叠
+const showFilters = ref(false)
+const isMobile = ref(window.innerWidth < 768)
+const onResize = () => { isMobile.value = window.innerWidth < 768 }
+onMounted(() => window.addEventListener('resize', onResize))
+onUnmounted(() => window.removeEventListener('resize', onResize))
 
 // 搜索条件
 const searchParams = reactive<API.PictureQueryRequest>({})
@@ -156,5 +168,21 @@ const doClear = () => {
 <style scoped>
 .picture-search-form .ant-form-item {
   margin-top: 16px;
+}
+
+.search-toggle-btn {
+  display: none;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+  .search-toggle-btn {
+    display: inline-block;
+  }
+
+  .picture-search-form :deep(.ant-form-item) {
+    display: block;
+    margin-right: 0;
+  }
 }
 </style>

@@ -2,13 +2,13 @@
   <div id="pictureDetailPage">
     <a-row :gutter="[16, 16]">
       <!-- 图片预览 -->
-      <a-col :sm="24" :md="16" :xl="18">
+      <a-col :xs="24" :md="16" :xl="18">
         <a-card title="图片预览">
           <a-image :src="picture.url" style="max-height: 600px; object-fit: contain" />
         </a-card>
       </a-col>
       <!-- 图片信息区域 -->
-      <a-col :sm="24" :md="8" :xl="6">
+      <a-col :xs="24" :md="8" :xl="6">
         <a-card title="图片信息">
           <a-descriptions :column="1">
             <a-descriptions-item label="作者">

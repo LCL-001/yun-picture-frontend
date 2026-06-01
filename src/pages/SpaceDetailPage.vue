@@ -1,14 +1,13 @@
 <template>
   <div id="spaceDetailPage">
     <!-- 空间信息 -->
-    <a-flex justify="space-between">
+    <a-flex justify="space-between" :vertical="isMobile" :gap="8">
       <h2>{{ space.spaceName }}（{{ SPACE_TYPE_MAP[space.spaceType] }}）</h2>
-      <a-space size="middle">
+      <a-space size="middle" :wrap="true">
         <a-button
           v-if="canUploadPicture"
           type="primary"
           :href="`/add_picture?spaceId=${id}`"
-          target="_blank"
         >
           + 创建图片
         </a-button>
@@ -18,7 +17,6 @@
           ghost
           :icon="h(TeamOutlined)"
           :href="`/spaceUserManage/${id}`"
-          target="_blank"
         >
           成员管理
         </a-button>
@@ -28,7 +26,6 @@
           ghost
           :icon="h(BarChartOutlined)"
           :href="`/space_analyze?spaceId=${id}`"
-          target="_blank"
         >
           空间分析
         </a-button>
@@ -79,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted, ref, watch } from 'vue'
+import { computed, h, onMounted, onUnmounted, ref, watch } from 'vue'
 import { getSpaceVoByIdUsingGet } from '@/api/spaceController.ts'
 import { message } from 'ant-design-vue'
 import {
@@ -101,6 +98,11 @@ interface Props {
 
 const props = defineProps<Props>()
 const space = ref<API.SpaceVO>({})
+
+const isMobile = ref(window.innerWidth < 768)
+const onResize = () => { isMobile.value = window.innerWidth < 768 }
+onMounted(() => window.addEventListener('resize', onResize))
+onUnmounted(() => window.removeEventListener('resize', onResize))
 
 // 通用权限检查函数
 function createPermissionChecker(permission: string) {

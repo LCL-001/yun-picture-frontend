@@ -1,7 +1,7 @@
 <template>
   <div id="addSpacePage">
     <h2 style="margin-bottom: 16px">
-      {{ route.query?.id ? '修改' : '创建' }} {{ SPACE_TYPE_MAP[spaceType] }}
+      {{ route.query?.id ? '修改' : '创建' }}{{ displaySpaceTypeText }}
     </h2>
     <!-- 空间信息表单 -->
     <a-form name="spaceForm" layout="vertical" :model="spaceForm" @finish="handleSubmit">
@@ -64,6 +64,7 @@ import {
   SPACE_TYPE_MAP,
 } from '@/constants/space.ts'
 import { formatSize } from '../utils'
+import { SPACE_LIST_REFRESH_EVENT } from '@/constants/events.ts'
 
 const space = ref<API.SpaceVO>()
 const spaceForm = reactive<API.SpaceAddRequest | API.SpaceEditRequest>({})
@@ -77,6 +78,14 @@ const spaceType = computed(() => {
   } else {
     return SPACE_TYPE_ENUM.PRIVATE
   }
+})
+
+// 编辑空间时优先展示接口返回的真实空间类型，避免团队空间被显示为私有空间。
+const displaySpaceTypeText = computed(() => {
+  if (route.query?.id && space.value?.spaceType === undefined) {
+    return '空间'
+  }
+  return SPACE_TYPE_MAP[space.value?.spaceType ?? spaceType.value]
 })
 
 const spaceLevelList = ref<API.SpaceLevel[]>([])
@@ -121,6 +130,7 @@ const handleSubmit = async (values: any) => {
   // 操作成功
   if (res.data.code === 0 && res.data.data) {
     message.success('操作成功')
+    window.dispatchEvent(new Event(SPACE_LIST_REFRESH_EVENT))
     // 跳转到空间详情页
     router.push({
       path: `/space/${res.data.data}`,

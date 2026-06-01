@@ -1,33 +1,44 @@
 <template>
   <div id="globalHeader">
-    <a-row :wrap="false">
-      <a-col flex="200px">
+    <a-row :wrap="false" class="header-row">
+      <a-col flex="220px" class="brand-col">
         <router-link to="/">
           <div class="title-bar">
             <img class="logo" src="../assets/logo.png" alt="logo" />
-            <div class="title">智能云图库</div>
+            <div class="title">火山图库</div>
           </div>
         </router-link>
       </a-col>
-      <a-col flex="auto">
+      <a-col flex="auto" class="nav-col">
         <a-menu
           v-model:selectedKeys="current"
           mode="horizontal"
           :items="items"
           @click="doMenuClick"
+          class="desktop-nav"
         />
       </a-col>
+      <a-col flex="40px" class="mobile-menu-col">
+        <MenuOutlined class="mobile-menu-icon" @click="emit('toggle-mobile-menu')" />
+      </a-col>
       <!-- 用户信息展示栏 -->
-      <a-col flex="120px">
+      <a-col flex="132px" class="user-col">
         <div class="user-login-status">
-          <div v-if="loginUserStore.loginUser.id">
+          <div v-if="loginUserStore.loginUser.id" style="display: flex; align-items: center; gap: 12px">
+            <a-badge :count="unreadCount" :overflow-count="99">
+              <BellOutlined style="font-size: 18px; cursor: pointer" @click="openNotifications" />
+            </a-badge>
             <a-dropdown>
-              <a-space>
-                <a-avatar :src="loginUserStore.loginUser.userAvatar" />
-                {{ loginUserStore.loginUser.userName ?? '无名' }}
+              <a-space class="user-entry">
+                <a-avatar :size="28" :src="loginUserStore.loginUser.userAvatar" />
+                <span class="user-name">{{ loginUserStore.loginUser.userName ?? '无名' }}</span>
               </a-space>
               <template #overlay>
                 <a-menu>
+                  <a-menu-item @click="openUserProfile">
+                    <UserOutlined />
+                    个人信息
+                  </a-menu-item>
                   <a-menu-item>
                     <router-link to="/my_space">
                       <UserOutlined />
@@ -48,16 +59,145 @@
         </div>
       </a-col>
     </a-row>
+    <a-modal
+      v-model:visible="userProfileVisible"
+      title="个人信息"
+      :footer="false"
+      width="520px"
+      class="user-profile-modal"
+    >
+      <a-spin :spinning="userProfileLoading || saving">
+        <div class="user-profile-panel">
+          <div class="user-profile-hero">
+            <div
+              class="avatar-upload-wrapper"
+              :class="{ 'is-editing': isEditing }"
+              @click="isEditing && handleAvatarClick()"
+            >
+              <a-spin :spinning="avatarUploading">
+                <a-avatar
+                  :size="72"
+                  :src="editForm.userAvatar ?? userProfile.userAvatar ?? loginUserStore.loginUser.userAvatar"
+                />
+              </a-spin>
+              <div v-if="isEditing" class="avatar-overlay">
+                <CameraOutlined />
+                <span>更换</span>
+              </div>
+            </div>
+            <input
+              ref="fileInputRef"
+              type="file"
+              accept="image/*"
+              style="display: none"
+              @change="onAvatarFileChange"
+            />
+            <div class="user-profile-title">
+              <div v-if="isEditing" class="user-profile-edit-fields">
+                <a-input
+                  v-model:value="editForm.userName"
+                  placeholder="昵称"
+                  style="margin-bottom: 8px"
+                />
+                <a-input v-model:value="editForm.userProfile" placeholder="简介" />
+              </div>
+              <template v-else>
+                <div class="user-profile-name">{{ userProfile.userName ?? '无名' }}</div>
+                <a-tag color="blue">{{ userRoleText }}</a-tag>
+              </template>
+            </div>
+          </div>
+          <a-descriptions :column="1" size="small" bordered>
+            <a-descriptions-item label="用户 ID">
+              {{ userProfile.id ?? '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="账号">
+              {{ userProfile.userAccount ?? '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item v-if="!isEditing" label="昵称">
+              {{ userProfile.userName ?? '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item v-if="!isEditing" label="简介">
+              {{ userProfile.userProfile ?? '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="会员编号">
+              {{ userProfile.vipNumber ?? '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="会员到期时间">
+              {{ formatDateTime(userProfile.vipExpireTime) }}
+            </a-descriptions-item>
+            <a-descriptions-item label="注册时间">
+              {{ formatDateTime(userProfile.createTime) }}
+            </a-descriptions-item>
+          </a-descriptions>
+          <div class="user-profile-actions">
+            <template v-if="!isEditing">
+              <a-button type="primary" block @click="startEdit">
+                <template #icon><EditOutlined /></template>
+                编辑资料
+              </a-button>
+            </template>
+            <template v-else>
+              <a-space style="width: 100%">
+                <a-button @click="cancelEdit">取消</a-button>
+                <a-button type="primary" :loading="saving" @click="handleSave">保存</a-button>
+              </a-space>
+            </template>
+          </div>
+        </div>
+      </a-spin>
+    </a-modal>
+    <!-- 通知抽屉 -->
+    <a-drawer
+      v-model:visible="notifVisible"
+      placement="right"
+      width="400"
+    >
+      <template #title>
+        <a-flex justify="space-between" align="center" style="width: 100%">
+          <span>消息通知</span>
+          <a-button v-if="notifications.length" type="link" size="small" danger @click="doClearNotifications">清空</a-button>
+        </a-flex>
+      </template>
+      <a-spin :spinning="notifLoading">
+        <div v-if="notifications.length">
+          <div
+            v-for="n in notifications" :key="n.id"
+            :style="{ padding: '10px 0', borderBottom: '1px solid #f0f0f0', opacity: n.isRead ? 0.6 : 1 }"
+          >
+            <div style="font-size: 13px; margin-bottom: 4px">{{ n.summary }}</div>
+            <a-flex justify="space-between">
+              <span style="color: #999; font-size: 11px">{{ formatRelativeTime(n.createTime) }}</span>
+              <a-button type="link" size="small" danger @click="doDeleteNotification(n.id)">删除</a-button>
+            </a-flex>
+          </div>
+        </div>
+        <a-empty v-else description="暂无通知" />
+      </a-spin>
+    </a-drawer>
   </div>
 </template>
 <script lang="ts" setup>
-import { computed, h, ref } from 'vue'
-import { HomeOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons-vue'
-import { MenuProps, message } from 'ant-design-vue'
+import { computed, h, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import {
+  BellOutlined,
+  CameraOutlined,
+  EditOutlined,
+  HomeOutlined,
+  LogoutOutlined,
+  MenuOutlined,
+  UserOutlined,
+} from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import type { MenuProps } from 'ant-design-vue'
 import { useRouter } from 'vue-router'
 import { useLoginUserStore } from '@/stores/useLoginUserStore.ts'
-import { userLogoutUsingPost } from '@/api/userController.ts'
+import { editUserUsingPost, getUserVoByIdUsingGet, userLogoutUsingPost } from '@/api/userController.ts'
+import { uploadFileUsingPost } from '@/api/fileController.ts'
+import { clearNotificationsUsingPost, clearUnreadUsingPost, deleteNotificationUsingPost, getUnreadCountUsingGet, listNotificationsUsingGet } from '@/api/postController.ts'
+import { formatDateTime, formatRelativeTime } from '@/utils'
 
+const emit = defineEmits(['toggle-mobile-menu'])
 const loginUserStore = useLoginUserStore()
 
 // 未经过滤的菜单项
@@ -67,6 +207,11 @@ const originItems = [
     icon: () => h(HomeOutlined),
     label: '主页',
     title: '主页',
+  },
+  {
+    key: '/square',
+    label: '论坛',
+    title: '广场',
   },
   {
     key: '/add_picture',
@@ -94,7 +239,7 @@ const originItems = [
 const filterMenus = (menus = [] as MenuProps['items']) => {
   return menus?.filter((menu) => {
     // 管理员才能看到 /admin 开头的菜单
-    if (menu?.key?.startsWith('/admin')) {
+    if (String(menu?.key ?? '').startsWith('/admin')) {
       const loginUser = loginUserStore.loginUser
       if (!loginUser || loginUser.userRole !== 'admin') {
         return false
@@ -106,6 +251,12 @@ const filterMenus = (menus = [] as MenuProps['items']) => {
 
 // 展示在菜单的路由数组
 const items = computed(() => filterMenus(originItems))
+const userProfileVisible = ref(false)
+const userProfileLoading = ref(false)
+const userProfile = ref<API.UserVO>({})
+const userRoleText = computed(() => {
+  return userProfile.value.userRole === 'admin' ? '管理员' : '普通用户'
+})
 
 const router = useRouter()
 // 当前要高亮的菜单项
@@ -116,11 +267,173 @@ router.afterEach((to, from, next) => {
 })
 
 // 路由跳转事件
-const doMenuClick = ({ key }) => {
+const doMenuClick = ({ key }: { key: string }) => {
   router.push({
     path: key,
   })
 }
+
+// 打开个人信息弹窗并获取当前登录用户信息
+const openUserProfile = async () => {
+  const userId = loginUserStore.loginUser.id
+  if (!userId) {
+    message.warning('请先登录')
+    return
+  }
+  userProfileVisible.value = true
+  userProfileLoading.value = true
+  try {
+    const res = await getUserVoByIdUsingGet({
+      id: userId,
+    })
+    if (res.data.code === 0 && res.data.data) {
+      userProfile.value = res.data.data
+    } else {
+      message.error('获取个人信息失败，' + res.data.message)
+    }
+  } catch (e: any) {
+    message.error('获取个人信息失败，' + e.message)
+  } finally {
+    userProfileLoading.value = false
+  }
+}
+
+// 编辑模式相关
+const isEditing = ref(false)
+const saving = ref(false)
+const avatarUploading = ref(false)
+const fileInputRef = ref<HTMLInputElement>()
+const editForm = reactive({
+  userName: '',
+  userProfile: '',
+  userAvatar: '',
+})
+
+const startEdit = () => {
+  editForm.userName = userProfile.value.userName ?? ''
+  editForm.userProfile = userProfile.value.userProfile ?? ''
+  editForm.userAvatar = userProfile.value.userAvatar ?? ''
+  isEditing.value = true
+}
+
+const cancelEdit = () => {
+  isEditing.value = false
+}
+
+const handleAvatarClick = () => {
+  fileInputRef.value?.click()
+}
+
+const onAvatarFileChange = async () => {
+  const file = fileInputRef.value?.files?.[0]
+  if (!file) {
+    return
+  }
+  avatarUploading.value = true
+  try {
+    const res = await uploadFileUsingPost(file)
+    if (res.data.code === 0 && res.data.data) {
+      editForm.userAvatar = res.data.data
+    } else {
+      message.error('头像上传失败，' + res.data.message)
+    }
+  } catch (e: any) {
+    message.error('头像上传失败，' + e.message)
+  } finally {
+    avatarUploading.value = false
+    if (fileInputRef.value) {
+      fileInputRef.value.value = ''
+    }
+  }
+}
+
+const handleSave = async () => {
+  saving.value = true
+  try {
+    const res = await editUserUsingPost({
+      id: userProfile.value.id,
+      userName: editForm.userName,
+      userProfile: editForm.userProfile,
+      userAvatar: editForm.userAvatar,
+    })
+    if (res.data.code === 0) {
+      message.success('保存成功')
+      isEditing.value = false
+      // 刷新用户信息
+      await loginUserStore.fetchLoginUser()
+      // 重新加载弹窗数据
+      if (userProfile.value.id) {
+        const profileRes = await getUserVoByIdUsingGet({ id: userProfile.value.id })
+        if (profileRes.data.code === 0 && profileRes.data.data) {
+          userProfile.value = profileRes.data.data
+        }
+      }
+    } else {
+      message.error('保存失败，' + res.data.message)
+    }
+  } catch (e: any) {
+    message.error('保存失败，' + e.message)
+  } finally {
+    saving.value = false
+  }
+}
+
+// 通知
+const notifVisible = ref(false)
+const notifLoading = ref(false)
+const notifications = ref<any[]>([])
+const unreadCount = ref(0)
+
+const fetchUnread = async () => {
+  try {
+    const res = await getUnreadCountUsingGet()
+    if (res.data.code === 0) unreadCount.value = res.data.data ?? 0
+  } catch { /* ignore */ }
+}
+
+const openNotifications = async () => {
+  notifVisible.value = true
+  notifLoading.value = true
+  unreadCount.value = 0
+  clearUnreadUsingPost().catch(() => {})
+  try {
+    const res = await listNotificationsUsingGet({ current: 1, pageSize: 20 })
+    if (res.data.code === 0 && res.data.data) {
+      notifications.value = res.data.data.records ?? []
+    }
+  } finally { notifLoading.value = false }
+}
+
+const doClearNotifications = async () => {
+  try {
+    await clearNotificationsUsingPost()
+    message.success('已清空')
+    notifications.value = []
+    unreadCount.value = 0
+  } catch { message.error('清空失败') }
+}
+
+const doDeleteNotification = async (id: number) => {
+  try {
+    await deleteNotificationUsingPost(id)
+    message.success('已删除')
+    notifications.value = notifications.value.filter(n => n.id !== id)
+    fetchUnread()
+  } catch { message.error('删除失败') }
+}
+
+let unreadTimer: ReturnType<typeof setInterval> | null = null
+
+onMounted(() => {
+  if (loginUserStore.loginUser.id) {
+    fetchUnread()
+    unreadTimer = setInterval(fetchUnread, 15000)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (unreadTimer) clearInterval(unreadTimer)
+})
 
 // 用户注销
 const doLogout = async () => {
@@ -138,18 +451,259 @@ const doLogout = async () => {
 </script>
 
 <style scoped>
-#globalHeader .title-bar {
-  display: flex;
+#globalHeader {
+  height: 64px;
+}
+
+#globalHeader .header-row {
+  height: 64px;
   align-items: center;
 }
 
+#globalHeader .brand-col {
+  min-width: 0;
+}
+
+#globalHeader .title-bar {
+  display: flex;
+  align-items: center;
+  height: 64px;
+  color: #0f172a;
+  text-decoration: none;
+}
+
 .title {
-  color: black;
+  color: #0f172a;
   font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
   margin-left: 16px;
+  white-space: nowrap;
 }
 
 .logo {
-  height: 48px;
+  height: 42px;
+  width: 42px;
+  border-radius: 12px;
+  box-shadow: 0 8px 18px rgba(22, 119, 255, 0.14);
+}
+
+#globalHeader :deep(.ant-menu) {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+  background: transparent;
+  line-height: 64px;
+}
+
+#globalHeader :deep(.ant-menu-horizontal) {
+  border-bottom: none;
+}
+
+#globalHeader :deep(.ant-menu-horizontal > .ant-menu-item) {
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  margin: 0 4px;
+  padding-inline: 16px;
+  border-radius: 999px;
+  color: #475569;
+  line-height: 40px;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+#globalHeader :deep(.ant-menu-horizontal > .ant-menu-item::after) {
+  display: none;
+}
+
+#globalHeader :deep(.ant-menu-horizontal > .ant-menu-item:hover) {
+  color: #1677ff;
+  background: #eef7ff;
+}
+
+#globalHeader :deep(.ant-menu-horizontal > .ant-menu-item-selected) {
+  color: #1677ff;
+  background: #e6f4ff;
+  font-weight: 600;
+}
+
+#globalHeader .user-col {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.user-login-status {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 0;
+}
+
+.user-entry {
+  max-width: 128px;
+  padding: 4px 8px;
+  border: 1px solid #e6f1fb;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.user-entry:hover {
+  border-color: #b7dcff;
+  background: #f4f9ff;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.1);
+}
+
+.user-name {
+  display: inline-block;
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.user-profile-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.user-profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(230, 244, 255, 0.92), rgba(255, 255, 255, 0.96)),
+    radial-gradient(circle at 0 0, rgba(22, 119, 255, 0.16), transparent 42%);
+}
+
+.user-profile-hero .user-profile-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.avatar-upload-wrapper {
+  position: relative;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.avatar-upload-wrapper.is-editing {
+  cursor: pointer;
+}
+
+.avatar-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.avatar-upload-wrapper.is-editing:hover .avatar-overlay {
+  opacity: 1;
+}
+
+.user-profile-edit-fields {
+  min-width: 0;
+}
+
+.user-profile-name {
+  margin-bottom: 8px;
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.user-profile-actions {
+  padding-top: 8px;
+}
+
+:deep(.user-profile-modal .ant-modal-body) {
+  padding-top: 8px;
+}
+
+:deep(.user-profile-modal .ant-descriptions-view) {
+  border-color: #e6f1fb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+:deep(.user-profile-modal .ant-descriptions-item-label) {
+  width: 118px;
+  background: #f4f9ff;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.mobile-menu-col {
+  display: none;
+}
+
+.mobile-menu-icon {
+  font-size: 20px;
+  cursor: pointer;
+  color: #475569;
+  line-height: 64px;
+}
+
+@media (max-width: 768px) {
+  .desktop-nav {
+    display: none !important;
+  }
+
+  .mobile-menu-col {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #globalHeader .brand-col {
+    flex: 0 0 150px !important;
+  }
+
+  #globalHeader .title {
+    font-size: 15px;
+    margin-left: 10px;
+  }
+
+  #globalHeader .nav-col {
+    flex: 1;
+    min-width: 0;
+  }
+
+  #globalHeader .user-col {
+    flex: 0 0 auto !important;
+  }
+
+  #globalHeader .user-entry {
+    max-width: 72px;
+    padding-inline: 6px;
+  }
+
+  #globalHeader .user-name {
+    display: none;
+  }
 }
 </style>
