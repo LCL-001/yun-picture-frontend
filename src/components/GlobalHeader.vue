@@ -39,9 +39,13 @@
                     <UserOutlined />
                     个人信息
                   </a-menu-item>
+                  <a-menu-item @click="goToMyProfile">
+                    <ReadOutlined />
+                    我的主页
+                  </a-menu-item>
                   <a-menu-item>
                     <router-link to="/my_space">
-                      <UserOutlined />
+                      <AppstoreOutlined />
                       我的空间
                     </router-link>
                   </a-menu-item>
@@ -180,12 +184,14 @@
 <script lang="ts" setup>
 import { computed, h, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import {
+  AppstoreOutlined,
   BellOutlined,
   CameraOutlined,
   EditOutlined,
   HomeOutlined,
   LogoutOutlined,
   MenuOutlined,
+  ReadOutlined,
   UserOutlined,
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
@@ -296,6 +302,11 @@ const openUserProfile = async () => {
   } finally {
     userProfileLoading.value = false
   }
+}
+
+const goToMyProfile = () => {
+  const uid = loginUserStore.loginUser.id
+  if (uid) router.push('/user/' + uid)
 }
 
 // 编辑模式相关
