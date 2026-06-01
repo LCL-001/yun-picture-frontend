@@ -57,11 +57,11 @@
       </div>
       <div
         class="bottom-nav-item"
-        :class="{ active: isMySpaceActive }"
-        @click="router.push('/my_space')"
+        :class="{ active: currentRoute.startsWith('/user/') }"
+        @click="loginUserStore.loginUser.id ? router.push('/user/' + loginUserStore.loginUser.id) : router.push('/user/login')"
       >
-        <FolderOpenOutlined />
-        <span class="bottom-nav-label">我的</span>
+        <ReadOutlined />
+        <span class="bottom-nav-label">主页</span>
       </div>
       <!-- 空间tab -->
       <a-popover
@@ -131,14 +131,13 @@
 import { computed, h, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  FolderOpenOutlined,
+  AppstoreOutlined,
   GithubOutlined,
   HomeOutlined,
   PlusCircleOutlined,
   ReadOutlined,
   TeamOutlined,
   UpOutlined,
-  UserOutlined,
 } from '@ant-design/icons-vue'
 import GlobalHeader from '@/components/GlobalHeader.vue'
 import { useLoginUserStore } from '@/stores/useLoginUserStore.ts'
@@ -173,12 +172,16 @@ const spacePopoverOpen = ref(false)
 const siderCurrent = ref<string[]>(['/'])
 
 // 菜单数据
-const fixedMenuItems = [
-  { key: '/', icon: () => h(HomeOutlined), label: '首页' },
-  { key: '/square', icon: () => h(ReadOutlined), label: '论坛' },
-  { key: '/my_space', icon: () => h(UserOutlined), label: '我的空间' },
-  { key: '/add_space?type=' + SPACE_TYPE_ENUM.TEAM, icon: () => h(TeamOutlined), label: '创建团队' },
-]
+const fixedMenuItems = computed(() => {
+  const uid = loginUserStore.loginUser.id
+  return [
+    { key: '/', icon: () => h(HomeOutlined), label: '首页' },
+    { key: '/square', icon: () => h(ReadOutlined), label: '论坛' },
+    ...(uid ? [{ key: '/user/' + uid, icon: () => h(ReadOutlined), label: '我的主页' }] : []),
+    { key: '/my_space', icon: () => h(AppstoreOutlined), label: '我的空间' },
+    { key: '/add_space?type=' + SPACE_TYPE_ENUM.TEAM, icon: () => h(TeamOutlined), label: '创建团队' },
+  ]
+})
 
 const siderMenuItems = computed(() => {
   if (teamSpaceList.value.length < 1) return fixedMenuItems
@@ -195,16 +198,6 @@ const siderMenuItems = computed(() => {
 })
 
 const currentRoute = computed(() => router.currentRoute.value.path)
-
-const isMySpaceActive = computed(() => {
-  const p = currentRoute.value
-  if (p === '/my_space') return true
-  if (p.startsWith('/space/')) {
-    const sid = p.replace('/space/', '')
-    return !teamSpaceList.value.some(su => String(su.spaceId) === sid)
-  }
-  return false
-})
 
 const isTeamSpaceActive = computed(() => {
   const p = currentRoute.value
@@ -227,6 +220,7 @@ watchEffect(() => {
   else if (p === '/square') siderCurrent.value = ['/square']
   else if (p === '/my_space') siderCurrent.value = ['/my_space']
   else if (p === '/add_space') siderCurrent.value = ['/my_space']
+  else if (p.startsWith('/user/')) siderCurrent.value = [p]
   else if (p.startsWith('/space/')) {
     const sid = p.replace('/space/', '')
     const found = teamSpaceList.value.some(su => String(su.spaceId) === sid)
